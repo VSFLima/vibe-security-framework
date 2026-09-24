@@ -1,0 +1,113 @@
+name: Vibe Security Framework
+
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install pinned Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="8.30.1"
+          FILE="gitleaks_${VERSION}_linux_x64.tar.gz"
+          curl --fail --location --silent --show-error \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/${FILE}" -o "/tmp/${FILE}"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${FILE}" | sha256sum -c -
+          tar -xzf "/tmp/${FILE}" -C /tmp gitleaks
+          sudo install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Verify Gitleaks canary
+        run: python checks/ci/gitleaks_canary.py
+
+      - name: Install pinned Trivy
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="0.74.0"
+          FILE="trivy_${VERSION}_Linux-64bit.tar.gz"
+          curl --fail --location --silent --show-error \
+            "https://github.com/aquasecurity/trivy/releases/download/v${VERSION}/${FILE}" -o "/tmp/${FILE}"
+          echo "2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a  /tmp/${FILE}" | sha256sum -c -
+          tar -xzf "/tmp/${FILE}" -C /tmp trivy
+          sudo install -m 0755 /tmp/trivy /usr/local/bin/trivy
+          trivy --version
+
+      - name: Run framework regression tests
+        run: |
+          python checks/tests/test_checks.py
+          python checks/tests/test_gitleaks_adapter.py
+          python checks/tests/test_trivy_adapter.py
+          python checks/tests/test_evidence_mapper.py
+          python checks/tests/test_sarif_builder.py
+          python checks/tests/test_gate_policy.py
+
+      - name: Run native checks
+        run: |
+          mkdir -p security-evidence
+          python checks/run_checks.py --target . --json > security-evidence/native.json
+
+      - name: Run Gitleaks adapter
+        run: python checks/adapters/gitleaks_adapter.py --target . --json > security-evidence/gitleaks.json || true
+
+      - name: Run Trivy adapter
+        run: python checks/adapters/trivy_adapter.py --target . --mode fs --json > security-evidence/trivy.json || true
+
+      - name: Map evidence to baseline controls
+        run: |
+          python checks/evidence/map_evidence.py \
+            --evidence security-evidence/gitleaks.json \
+            --evidence security-evidence/trivy.json \
+            --output security-evidence/control-evidence.json
+
+      - name: Build SARIF
+        run: |
+          python checks/ci/build_sarif.py \
+            --input security-evidence/gitleaks.json \
+            --input security-evidence/trivy.json \
+            --output security-evidence/vibe-security.sarif
+
+      - name: Enforce strict release gate
+        run: |
+          python checks/ci/evaluate_gate.py --policy strict \
+            --evidence security-evidence/gitleaks.json \
+            --evidence security-evidence/trivy.json
+
+      - name: Upload SARIF (best effort)
+        if: always() && hashFiles('security-evidence/vibe-security.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: security-evidence/vibe-security.sarif
+          category: vibe-security-framework
+
+      - name: Upload evidence artifact
+        if: always() && hashFiles('security-evidence/**') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: vibe-security-evidence
+          path: security-evidence/
+          retention-days: 14
+          if-no-files-found: error

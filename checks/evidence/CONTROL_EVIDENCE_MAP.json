@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "policy": {
+    "automatic_validation": false,
+    "rule": "Scanner evidence may support a control but never changes the control to validated/\u2705 by itself."
+  },
+  "checks": {
+    "external.gitleaks": {
+      "controls": [
+        1,
+        2,
+        3,
+        4,
+        70
+      ],
+      "coverage": "supporting",
+      "notes": {
+        "1": "Supports detection of secret patterns in scanned source/files.",
+        "2": "Git mode can support secret detection in repository history.",
+        "3": "Can support artifact/archive secret scanning when the scanner invocation actually covers the artifact.",
+        "4": "A finding can identify exposure; rotation/revocation still requires separate evidence.",
+        "70": "Can contribute evidence about source/artifact integrity hygiene but does not validate CI/CD integrity alone."
+      }
+    },
+    "external.trivy": {
+      "controls": [
+        54,
+        55,
+        70
+      ],
+      "coverage": "supporting",
+      "notes": {
+        "54": "Supports known-vulnerability findings for detected dependencies/packages.",
+        "55": "Supports supply-chain evidence, but does not alone validate origin, maintenance or lockfile policy.",
+        "70": "Can contribute dependency/SBOM/artifact evidence; it does not validate the complete CI/CD integrity control."
+      }
+    }
+  }
+}

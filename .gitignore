@@ -1,0 +1,25 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments / build output
+.venv/
+venv/
+build/
+dist/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+
+# Misc
+.DS_Store
