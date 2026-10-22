@@ -101,7 +101,15 @@ está em **v1.0.0**.
 - **Versão:** 1.0.0 (framework) / 0.2.2 (camada de checks).
 - **Testes:** 35 testes de contrato.
 - **Licença:** MIT (`LICENSE`).
-- **Repositório privado.**
+- **Repositório público.**
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Leia o [`CONTRIBUTING.md`](CONTRIBUTING.md). O projeto é open source sob a licença MIT.
+
+## 📄 Licença
+
+Distribuído sob a licença **MIT**. Veja [`LICENSE`](LICENSE).
 
 ## 🙏 Créditos
 
@@ -111,6 +119,6 @@ está em **v1.0.0**.
 
 ---
 
-> 🔒 **Repositório privado.**
+> 🌐 **Repositório público.**
 
 <p align="center">Feito por <a href="https://t.me/vsf_lima">@vsf_lima</a> — VSFLima</p>
